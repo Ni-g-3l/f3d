@@ -26,6 +26,8 @@ F3D behavior can be fully controlled from the command line using the following o
 | \-\-scan-plugins                                      |                                   | Scan standard directories for plugins and display their names, results may be incomplete. See [plugins](PLUGINS.md) for more info.                                                                                                                                                     |
 | \-\-screenshot-filename=\<png file\>                  | string<br>`{app}/{model}_{n}.png` | Filename to save [screenshots](INTERACTIONS.md#taking-screenshots) to. Can use [template variables](#filename-templating). Supports relative paths [as described](INTERACTIONS.md#taking-screenshots).                                                                                 |
 | \-\-rendering-backend=\<auto\|egl\|osmesa\|glx\|wgl\> | string<br>auto                    | Rendering backend to load, `auto` means to let F3D pick the correct one for you depending on your system capabilities. Use `egl` or `osmesa` on linux to force headless rendering.                                                                                                     |
+| -D, \-\-define=\<libf3d.option=value\>                | special<br>-                      | A repeatable option to set [libf3d options](../libf3d/OPTIONS.md) manually. May trigger unexpected behavior.                                                                                                                                                                           |
+| -R, \-\-reset=\<libf3d.option\>                       | special<br>-                      | A repeatable option to reset [libf3d options](../libf3d/OPTIONS.md) manually. Useful when overidding option set in [configuration files](CONFIGURATION_FILE.md).                                                                                                                       |
 
 ## General Options
 
@@ -35,7 +37,7 @@ F3D behavior can be fully controlled from the command line using the following o
 | \-\-progress                                         | bool<br>false    | Show a _progress bar_ when loading the file.                                                                                                                                         |
 | \-\-animation-progress                               | bool<br>false    | Show a _progress bar_ when playing the animation.                                                                                                                                    |
 | \-\-multi-file-mode=\<single \| all\>                | string<br>single | When opening multiple files, select if they should be grouped (`all`) or alone (`single`). Configuration files for all loaded files will be used in the order they are provided.     |
-| \-\-up=\<[+\|-][X\|Y\|Z]\>                           | string<br>+Y     | Define the Up direction.                                                                                                                                                             |
+| \-\-up=\<[+\|-][X\|Y\|Z]\>                           | direction<br>+Y  | Define the Up direction.                                                                                                                                                             |
 | -x, \-\-axis                                         | bool<br>false    | Show _axes_ as a trihedron in the scene.                                                                                                                                             |
 | -g, \-\-grid                                         | bool<br>false    | Show _a grid_ aligned with the horizontal (orthogonal to the Up direction) plane.                                                                                                    |
 | \-\-grid\-unit=\<length\>                            | double<br>-      | Set the size of the _unit square_ for the grid. If not set (the default) a suitable value will be automatically computed.                                                            |
@@ -113,7 +115,7 @@ F3D behavior can be fully controlled from the command line using the following o
 | \-\-camera-focal-point=\<X,Y,Z\>     | vector\<double\><br>- | Set the camera focal point.                                                                    |
 | \-\-camera-view-up=\<X,Y,Z\>         | vector\<double\><br>- | Set the camera view up vector. Will be orthogonalized.                                         |
 | \-\-camera-view-angle=\<angle\>      | double<br>-           | Set the camera view angle, a strictly positive value in degrees.                               |
-| \-\-camera-direction=\<X,Y,Z\>       | vector\<double\><br>- | Set the camera direction, looking at the focal point.                                          |
+| \-\-camera-direction=\<X,Y,Z\>       | direction<br>-        | Set the camera direction, looking at the focal point.                                          |
 | \-\-camera-zoom-factor=\<factor\>    | double<br>-           | Set the camera zoom factor relative to the autozoom on data, a strictly positive value.        |
 | \-\-camera-azimuth-angle=\<angle\>   | double<br>0.0         | Apply an azimuth transformation to the camera, in degrees, added after other camera options.   |
 | \-\-camera-elevation-angle=\<angle\> | double<br>0.0         | Apply an elevation transformation to the camera, in degrees, added after other camera options. |
@@ -158,7 +160,11 @@ Some rendering options are not compatible between them, here is the precedence o
 
 To turn on/off boolean options, it is possible to write `--option=true` and `--option=false`, eg `--points-sprites=false`.
 
-As documented, only the `--option=value` syntax is supported. The syntax `--option value` is not supported.
+As documented, the `--option=value` syntax should be preferred. The syntax `--option value` can have unintended effect with positional arguments.
+
+To set pass an arguments to a short option, use the following syntax: `-Rlibf3d.option`.
+
+The `--define` option has a special syntax: `--define=libf3d.option=value`.
 
 All options are parsed according to their type, see the [parsing documentation](PARSING.md) for more details.
 

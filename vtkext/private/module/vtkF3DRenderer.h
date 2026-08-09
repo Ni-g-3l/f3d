@@ -585,9 +585,20 @@ public:
   void SetAnimationProgressColor(const std::array<double, 3>& color);
 
   /**
-   * Update the current animation time, meant to be pushed every tick during playback
+   * Set the animation playback speed factor, for display only, shown next to the animation name
+   */
+  void SetAnimationSpeedFactor(double speedFactor);
+
+  /**
+   * Update the current animation time, for display only, meant to be pushed every tick during
+   * playback
    */
   void UpdateAnimationTime(double currentTime);
+
+  /**
+   * Get the DPI scale based on the current render window
+   */
+  double GetDPIScale();
 
 private:
   vtkF3DRenderer();
@@ -731,7 +742,9 @@ private:
   vtkSmartPointer<vtkOrientationMarkerWidget> AxisWidget;
   vtkSmartPointer<vtkCameraOrientationWidget> ModernAxisWidget;
   vtkSmartPointer<vtkCameraOrientationRepresentation> ModernAxisRepresentation;
-  vtkSmartPointer<vtkCallbackCommand> ModernAxisWidgetResizeCallback;
+#if VTK_VERSION_NUMBER >= VTK_VERSION_CHECK(9, 5, 20251001)
+  int ModernAxisBasePadding[2] = { 0, 0 };
+#endif
   double ModernAxisBackdropOpacity = 0.0;
   double TotalTime = 0.0;
 

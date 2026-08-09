@@ -23,8 +23,16 @@ jobs:
     name: Update LFS data cache
     if: |
       contains(github.event.pull_request.labels.*.name, 'ci:fast') ||
-      contains(github.event.pull_request.labels.*.name, 'ci:android') ||
-      contains(github.event.pull_request.labels.*.name, 'ci:main') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:extended') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:linux') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:macos_arm') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:macos_intel') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:windows') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:python') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:coverage') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:sanitizer') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:analysis') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:wasm') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     outputs:
@@ -50,7 +58,10 @@ jobs:
     name: Recover VTK matrix
     runs-on: ubuntu-24.04
     if: |
-      contains(github.event.pull_request.labels.*.name, 'ci:main') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:linux') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:macos_arm') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:macos_intel') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:windows') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     outputs:
@@ -77,7 +88,7 @@ jobs:
   windows:
     needs: [cache_lfs, recover_vtk_matrix]
     if: |
-      contains(github.event.pull_request.labels.*.name, 'ci:main') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:windows') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     strategy:
@@ -117,7 +128,6 @@ jobs:
     needs: cache_lfs
     if: |
       contains(github.event.pull_request.labels.*.name, 'ci:fast') ||
-      contains(github.event.pull_request.labels.*.name, 'ci:main') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
@@ -141,10 +151,40 @@ jobs:
           versions_file: ./source/.github/workflows/versions.json
           build_type: fast
           vtk_version: v9.6.2
-          rendering_backend: auto
           optdeps_label: no-optdeps
           exclude_deprecated_label: exclude-deprecated
-          static_label: no-static
+          lfs_sha: ${{ needs.cache_lfs.outputs.lfs_sha}}
+
+  #----------------------------------------------------------------------------
+  # Linux not as fast CI: Build and test a single complete linux CI
+  #----------------------------------------------------------------------------
+  linux_extended:
+    needs: cache_lfs
+    if: |
+      contains(github.event.pull_request.labels.*.name, 'ci:extended') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:full') ||
+      github.ref == 'refs/heads/master'
+    runs-on: ubuntu-24.04
+    container: ghcr.io/f3d-app/f3d-ci
+
+    env:
+      CMAKE_POLICY_VERSION_MINIMUM: 3.5
+      DISPLAY: :0
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v7
+        with:
+          path: "source"
+          fetch-depth: 0
+          lfs: false
+
+      - name: Generic CI
+        uses: ./source/.github/actions/generic-ci
+        with:
+          versions_file: ./source/.github/workflows/versions.json
+          build_type: extended
+          vtk_version: commit
           lfs_sha: ${{ needs.cache_lfs.outputs.lfs_sha}}
 
   #----------------------------------------------------------------------------
@@ -153,7 +193,7 @@ jobs:
   linux:
     needs: [cache_lfs, recover_vtk_matrix]
     if: |
-      contains(github.event.pull_request.labels.*.name, 'ci:main') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:linux') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     strategy:
@@ -165,12 +205,14 @@ jobs:
           - exclude_deprecated_label: no-exclude-deprecated
           - optdeps_label: optdeps
           - mindeps_label: no-mindeps
+          - gles_label: no-gles
           - rendering_backend: auto
           - static_label: no-static
           - build_type: egl
             vtk_version: commit
             optdeps_label: optdeps
             mindeps_label: no-mindeps
+            gles_label: no-gles
             exclude_deprecated_label: no-exclude-deprecated
             rendering_backend: egl
             static_label: no-static
@@ -178,6 +220,7 @@ jobs:
             vtk_version: commit
             optdeps_label: optdeps
             mindeps_label: no-mindeps
+            gles_label: no-gles
             exclude_deprecated_label: no-exclude-deprecated
             rendering_backend: osmesa
             static_label: no-static
@@ -185,6 +228,7 @@ jobs:
             vtk_version: commit
             optdeps_label: optdeps
             mindeps_label: no-mindeps
+            gles_label: no-gles
             exclude_deprecated_label: exclude-deprecated
             rendering_backend: auto
             static_label: no-static
@@ -192,6 +236,7 @@ jobs:
             vtk_version: commit
             optdeps_label: no-optdeps
             mindeps_label: no-mindeps
+            gles_label: no-gles
             exclude_deprecated_label: no-exclude-deprecated
             rendering_backend: auto
             static_label: no-static
@@ -199,6 +244,7 @@ jobs:
             vtk_version: commit
             optdeps_label: optdeps
             mindeps_label: no-mindeps
+            gles_label: no-gles
             exclude_deprecated_label: no-exclude-deprecated
             rendering_backend: auto
             static_label: static
@@ -206,6 +252,15 @@ jobs:
             vtk_version: commit
             optdeps_label: optdeps
             mindeps_label: mindeps
+            gles_label: no-gles
+            exclude_deprecated_label: no-exclude-deprecated
+            rendering_backend: auto
+            static_label: no-static
+          - build_type: gles
+            vtk_version: commit
+            optdeps_label: optdeps
+            mindeps_label: no-mindeps
+            gles_label: gles
             exclude_deprecated_label: no-exclude-deprecated
             rendering_backend: auto
             static_label: no-static
@@ -234,6 +289,7 @@ jobs:
           rendering_backend: ${{matrix.rendering_backend}}
           optdeps_label: ${{matrix.optdeps_label}}
           mindeps_label: ${{matrix.mindeps_label}}
+          gles_label: ${{matrix.gles_label}}
           exclude_deprecated_label: ${{matrix.exclude_deprecated_label}}
           static_label: ${{matrix.static_label}}
           lfs_sha: ${{ needs.cache_lfs.outputs.lfs_sha}}
@@ -244,6 +300,7 @@ jobs:
   macos_intel:
     needs: [cache_lfs, recover_vtk_matrix]
     if: |
+      contains(github.event.pull_request.labels.*.name, 'ci:macos_intel') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     strategy:
@@ -264,7 +321,7 @@ jobs:
           fetch-depth: 0
           lfs: false
 
-      # OSMesa is supported on macOS from 9.6.20260701
+      # OSMesa is supported on macOS from 9.7.20260706
       # Since it's more robust than Apple's software renderer, we use it for the macOS ARM CI
       - name: Generic CI
         uses: ./source/.github/actions/generic-ci
@@ -281,7 +338,7 @@ jobs:
   macos_arm:
     needs: [cache_lfs, recover_vtk_matrix]
     if: |
-      contains(github.event.pull_request.labels.*.name, 'ci:main') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:macos_arm') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     strategy:
@@ -311,7 +368,7 @@ jobs:
           fetch-depth: 0
           lfs: false
 
-      # OSMesa is supported on macOS from 9.6.20260701
+      # OSMesa is supported on macOS from 9.7.20260706
       # Since it's more robust than Apple's software renderer, we use it for the macOS ARM CI
       - name: Generic CI
         uses: ./source/.github/actions/generic-ci
@@ -330,6 +387,7 @@ jobs:
   python_packaging:
     needs: cache_lfs
     if: |
+      contains(github.event.pull_request.labels.*.name, 'ci:python') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     strategy:
@@ -378,7 +436,7 @@ jobs:
   coverage:
     needs: cache_lfs
     if: |
-      contains(github.event.pull_request.labels.*.name, 'ci:main') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:coverage') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     runs-on: ubuntu-24.04
@@ -411,6 +469,7 @@ jobs:
   sanitizer:
     needs: cache_lfs
     if: |
+      contains(github.event.pull_request.labels.*.name, 'ci:sanitizer') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     strategy:
@@ -449,7 +508,7 @@ jobs:
   static-analysis:
     needs: cache_lfs
     if: |
-      contains(github.event.pull_request.labels.*.name, 'ci:main') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:analysis') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     strategy:
@@ -482,6 +541,7 @@ jobs:
   #----------------------------------------------------------------------------
   external-build:
     if: |
+      contains(github.event.pull_request.labels.*.name, 'ci:external') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     strategy:
@@ -514,6 +574,7 @@ jobs:
     runs-on: ubuntu-24.04
     if: |
       contains(github.event.pull_request.labels.*.name, 'ci:android') ||
+      contains(github.event.pull_request.labels.*.name, 'ci:wasm') ||
       contains(github.event.pull_request.labels.*.name, 'ci:full') ||
       github.ref == 'refs/heads/master'
     outputs:
@@ -601,7 +662,7 @@ jobs:
 
       - name: Build F3D web app with npm F3D package
         working-directory: ${{github.workspace}}/source/examples/libf3d/web
-        run: npm run build
+        run: npm run build --workspaces
 
       - name: Retrieve f3d package
         uses: actions/download-artifact@v8
@@ -612,8 +673,8 @@ jobs:
       # Override with the locally built package
       - name: Install f3d package
         working-directory: ${{github.workspace}}/source/examples/libf3d/web
-        run: npm install f3d-*.tgz
+        run: npm install f3d-*.tgz --workspaces
 
       - name: Build F3D web app with package just built from branch
         working-directory: ${{github.workspace}}/source/examples/libf3d/web
-        run: npm run build
+        run: npm run build --workspaces

@@ -170,7 +170,7 @@ CLI: `--texture-normal`.
 
 ### `model.checkerboard.enable` (_bool_, default: `false`, **on load**)
 
-Override model's texture with a checkerboard texture.
+Override model's texture with a checkerboard texture. Anti-aliasing is recommended.
 
 CLI: `--checkerboard`.
 
@@ -273,6 +273,9 @@ CLI: `--textures-transform`.
 Enable and set the _blending_ technique. This is a technique used to correctly render translucent objects.
 Valid options are: `ddp` (dual depth peeling, quality), `sort` (only for gaussians), `sort_cpu` (only for gaussians, slow), `stochastic` (fast), `none` (disabled).
 
+> [!WARNING]
+> `ddp`, `sort` and `sort_cpu` are not compatible with OpenGL ES (WebAssembly and Android)
+
 CLI: `--blending`.
 
 ### `render.effect.antialiasing.mode` (_string_, default: `none`, enum domain: `none, fxaa, ssaa, taa`)
@@ -371,6 +374,9 @@ CLI: `--grid-reflection`.
 
 Show _axes grid_ in the scene.
 
+> [!WARNING]
+> this option is not compatible with OpenGL ES (WebAssembly and Android)
+
 CLI: `--axes-grid`.
 
 ### `render.raytracing.enable` (_bool_, default: `false`)
@@ -434,7 +440,7 @@ CLI: `--blur-coc`.
 
 ### `render.light.intensity` (_double_, default: `1.0`, range domain: `[0, 5]`, increment: `0.02`)
 
-Adjust the intensity of every light in the scene (except HDRI).
+Adjust the intensity of every light in the scene, including HDRI image-based lighting.
 
 CLI: `--light-intensity`.
 
@@ -531,6 +537,9 @@ CLI: `--dpi-aware`.
 ### `ui.fps` (_bool_, default: `false`)
 
 Display a _frame per second counter_.
+
+> [!WARNING]
+> this option is not compatible with OpenGL ES (WebAssembly and Android)
 
 CLI: `--fps`.
 

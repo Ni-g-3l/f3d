@@ -11,6 +11,7 @@ namespace fs = std::filesystem;
 
 int TestSDKEngineExceptions([[maybe_unused]] int argc, [[maybe_unused]] char* argv[])
 {
+#ifndef F3D_USE_GLES // external window not supported on GLES
   // For coverage, check that an invalid symbol loader is not crashing
   try
   {
@@ -19,11 +20,15 @@ int TestSDKEngineExceptions([[maybe_unused]] int argc, [[maybe_unused]] char* ar
   catch (const f3d::engine::no_window_exception&)
   {
   }
+#endif
 
   PseudoUnitTest test;
 
   test.expect<f3d::engine::no_window_exception>(
     "create empty external context", []() { std::ignore = f3d::engine::createExternal(nullptr); });
+
+  test.expect<f3d::engine::no_window_exception>(
+    "create wasm context", []() { std::ignore = f3d::engine::createWasm(); });
 
   {
     f3d::engine eng = f3d::engine::createNone();

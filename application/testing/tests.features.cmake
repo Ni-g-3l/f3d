@@ -35,9 +35,9 @@ endif()
 
 # FX
 f3d_test(NAME TestSSAO DATA suzanne.ply ARGS -q)
-f3d_test(NAME TestDepthPeeling DATA suzanne.ply ARGS -sp --opacity=0.9)
+f3d_test(NAME TestDepthPeeling DATA suzanne.ply ARGS -sp --opacity=0.9 SKIP_GLES)
 f3d_test(NAME TestToneMapping DATA suzanne.ply ARGS -t)
-f3d_test(NAME TestDepthPeelingToneMapping DATA suzanne.ply ARGS --opacity=0.9 -pt)
+f3d_test(NAME TestDepthPeelingToneMapping DATA suzanne.ply ARGS --opacity=0.9 -pt SKIP_GLES)
 f3d_test(NAME TestBackground DATA suzanne.ply ARGS --background-color=0.8,0.2,0.9)
 f3d_test(NAME TestNoBackground DATA cow.vtp ARGS --no-background)
 f3d_test(NAME TestMaterial DATA suzanne.ply ARGS --color=0.72,0.45,0.2 --metallic=0.7 --roughness=0.2)
@@ -64,7 +64,9 @@ f3d_test(NAME TestScalarsWithBarContinuity DATA suzanne.ply ARGS -b -s --colorin
 f3d_test(NAME TestComponentName DATA from_abq.vtu ARGS --scalar-coloring --coloring-scalar-bar --coloring-component=2)
 f3d_test(NAME TestUserMatrixColoring DATA InterpolationTest.glb ARGS --scalar-coloring --coloring-array=TEXCOORD_0)
 f3d_test(NAME TestSkinColoring DATA SimpleSkin.gltf ARGS --scalar-coloring --coloring-array=WEIGHTS_0)
+f3d_test(NAME TestSkinEdges DATA RiggedFigure.glb ARGS --animation-time=1 --edges --line-width=5)
 f3d_test(NAME TestMorphColoring DATA SimpleMorph.gltf ARGS --scalar-coloring)
+f3d_test(NAME TestMorphEdges DATA SimpleMorph.gltf ARGS --edges --line-width=5)
 f3d_test(NAME TestAnimationUserMatrixColoring DATA InterpolationTest.glb ARGS --scalar-coloring --coloring-array=TEXCOORD_0 --animation-time=0.5)
 f3d_test(NAME TestAnimationSkinColoring DATA SimpleSkin.gltf ARGS --scalar-coloring --coloring-array=WEIGHTS_0 --animation-time=2)
 f3d_test(NAME TestAnimationMorphColoring DATA SimpleMorph.gltf ARGS --scalar-coloring --animation-time=0.5)
@@ -105,10 +107,11 @@ endif()
 ## Axes grid
 # Needs https://gitlab.kitware.com/vtk/vtk/-/merge_requests/11209
 if(VTK_VERSION VERSION_GREATER_EQUAL 9.6.20260612)
-  f3d_test(NAME TestAxesGridEnable DATA suzanne.ply ARGS --axes-grid THRESHOLD 0.08) # Threshold required for MacOS due to line rendering differences
-  f3d_test(NAME TestAxesGridEnableNonCenteredData DATA cow.vtp ARGS --axes-grid)
-  f3d_test(NAME TestAxesGridEnableSSAA DATA cow.vtp ARGS --axes-grid --anti-aliasing=ssaa THRESHOLD 0.05)
-  f3d_test(NAME TestCommandScriptAxesGridAnimation SCRIPT DATA BoxAnimated.gltf ARGS --axes-grid --camera-zoom-factor=0.2)
+  # Axes grid actor not working with GLES
+  f3d_test(NAME TestAxesGridEnable DATA suzanne.ply ARGS --axes-grid THRESHOLD 0.08 SKIP_GLES) # Threshold required for MacOS due to line rendering differences
+  f3d_test(NAME TestAxesGridEnableNonCenteredData DATA cow.vtp ARGS --axes-grid SKIP_GLES)
+  f3d_test(NAME TestAxesGridEnableSSAA DATA cow.vtp ARGS --axes-grid --anti-aliasing=ssaa THRESHOLD 0.05 SKIP_GLES)
+  f3d_test(NAME TestCommandScriptAxesGridAnimation SCRIPT DATA BoxAnimated.gltf ARGS --axes-grid --camera-zoom-factor=0.2 SKIP_GLES)
 endif()
 
 ## Camera
@@ -126,6 +129,7 @@ f3d_test(NAME TestVerboseCamera DATA Cameras.gltf ARGS --camera-index=1 --verbos
 # Needs https://gitlab.kitware.com/vtk/vtk/-/merge_requests/12489
 if(VTK_VERSION VERSION_GREATER_EQUAL 9.5.20251001)
   f3d_test(NAME TestCameraConfiguration DATA suzanne.obj ARGS --camera-position=0,0,-10 -x --camera-view-up=+X --camera-focal-point=1,0,0 --camera-view-angle=20 --camera-azimuth-angle=40 --camera-elevation-angle=-80 --camera-direction=12,34,56 --camera-zoom-factor=78 UI)
+  f3d_test(NAME TestCameraConfigurationPartial DATA suzanne.obj ARGS --camera-focal-point=1,0,0 --camera-view-angle=20)
 endif()
 
 ## Volume
@@ -138,7 +142,7 @@ f3d_test(NAME TestVolumeCells DATA waveletArrays.vti ARGS -vb --coloring-by-cell
 f3d_test(NAME TestVolumeColoringArray DATA waveletArrays.vti ARGS -vb --coloring-array=Result LONG_TIMEOUT)
 
 ## Normal Glyphs
-f3d_test(NAME TestNormalGlyphsPerspectiveEnable DATA suzanne.obj ARGS --normal-glyphs)
+f3d_test(NAME TestNormalGlyphsPerspectiveEnable DATA suzanne.obj ARGS --normal-glyphs LONG_TIMEOUT)
 f3d_test(NAME TestNormalGlyphsOrthographicEnable DATA suzanne.obj ARGS --normal-glyphs --camera-orthographic)
 f3d_test(NAME TestNormalGlyphsScale DATA suzanne.obj ARGS --normal-glyphs --normal-glyphs-scale=0.1)
 f3d_test(NAME TestNormalGlyphsNoNormalsAvailable DATA cow.vtp ARGS --normal-glyphs NO_BASELINE REGEXP "does not contain any normals")
@@ -152,11 +156,12 @@ f3d_test(NAME TestTextures DATA WaterBottle.glb ARGS --texture-material=${F3D_SO
 f3d_test(NAME TestTextureMatCap DATA suzanne.ply ARGS --texture-matcap=${F3D_SOURCE_DIR}/testing/data/skin.png)
 f3d_test(NAME TestTexturesTransform DATA world.obj ARGS --textures-transform=1,0,0,0,-1,0,0,0,1)
 f3d_test(NAME TestTexturesTransformGL DATA WaterBottle.glb ARGS --textures-transform=1,0,0,0,-1,0,0,0,1 --camera-direction=-1,0,0)
-f3d_test(NAME TestTextureMatCapWithEdges DATA suzanne.ply ARGS -e --texture-matcap=${F3D_SOURCE_DIR}/testing/data/skin.png)
+f3d_test(NAME TestTextureMatCapWithEdges DATA suzanne.ply ARGS -e --texture-matcap=${F3D_SOURCE_DIR}/testing/data/skin.png THRESHOLD 0.05) # Small rendering differences on GLES
 f3d_test(NAME TestTextureColorWithOptions DATA WaterBottle.glb ARGS --texture-base-color=${F3D_SOURCE_DIR}/testing/data/albedo_mod.png --color=1,1,0 --opacity=0.4 --blending)
 f3d_test(NAME TestTextureCheckerBoard DATA WaterBottle.glb ARGS --checkerboard)
+f3d_test(NAME TestTextureCheckerBoardSSAA DATA WaterBottle.glb ARGS --checkerboard --anti-aliasing=ssaa)
 f3d_test(NAME TestTextureCheckerBoardOnMissingUV DATA RiggedFigure.glb ARGS --checkerboard REGEXP "Texture coordinates are required to display checkerboard texture." NO_BASELINE)
-f3d_test(NAME TestTextureColor DATA WaterBottle.glb ARGS --texture-base-color=${F3D_SOURCE_DIR}/testing/data/albedo_mod.png --blending)
+f3d_test(NAME TestTextureColor DATA WaterBottle.glb ARGS --texture-base-color=${F3D_SOURCE_DIR}/testing/data/albedo_mod.png --blending SKIP_GLES) # Skip GLES because of depth peeling
 
 ## Lights
 f3d_test(NAME TestLightIntensityBrighter DATA cow.vtp ARGS --light-intensity=5.0)
@@ -168,8 +173,8 @@ f3d_test(NAME TestLightIntensityDarkerFullScene DATA WaterBottle.glb ARGS --ligh
 f3d_test(NAME TestUTF8 DATA "(ノಠ益ಠ )ノ.vtp")
 f3d_test(NAME TestFilenameCommasSpaces DATA "tetrahedron, with commas & spaces.stl")
 f3d_test(NAME TestFilename DATA suzanne.ply ARGS -n UI)
-f3d_test(NAME TestHDRIFilename DATA dragon.vtu ARGS --hdri-filename HDRI shanghai_bund_1k.hdr UI LONG_TIMEOUT)
-f3d_test(NAME TestFilenameHDRIFilename DATA dragon.vtu ARGS --hdri-filename -n HDRI shanghai_bund_1k.hdr RESOLUTION 400,400 UI LONG_TIMEOUT)
+f3d_test(NAME TestHDRIFilename DATA dragon.vtu ARGS --hdri-filename HDRI shanghai_bund_1k.hdr UI LONG_TIMEOUT THRESHOLD 0.05) # Small rendering differences on GLES
+f3d_test(NAME TestFilenameHDRIFilename DATA dragon.vtu ARGS --hdri-filename -n HDRI shanghai_bund_1k.hdr RESOLUTION 400,400 UI LONG_TIMEOUT THRESHOLD 0.05) # Small rendering differences on GLES
 f3d_test(NAME TestHDRIFilenameDefault DATA dragon.vtu ARGS --hdri-filename -f -j UI LONG_TIMEOUT DEFAULT_HDRI)
 f3d_test(NAME TestFilenameWhiteBg DATA suzanne.ply ARGS -n --background-color=1,1,1 UI)
 f3d_test(NAME TestConsoleBadgeWarning DATA suzanne.ply ARGS --position=0 UI)
@@ -258,6 +263,7 @@ f3d_test(NAME TestAnimationIndicesMulti DATA InterpolationTest.glb ARGS --animat
 f3d_test(NAME TestAnimationIndexDeprecated DATA InterpolationTest.glb ARGS --animation-index=7 --animation-time=0.5 --animation-progress UI)
 f3d_test(NAME TestMultiFileAnimationIndices DATA InterpolationTest.glb BoxAnimated.gltf ARGS --animation-indices=9 --animation-time=0.85 --animation-progress --multi-file-mode=all UI)
 f3d_test(NAME TestAnimationProgressBarWithScalarBar DATA soldier_animations.mdl ARGS --animation-indices=2 --animation-time=0.5 --animation-progress=advanced --scalar-coloring --coloring-scalar-bar UI)
+f3d_test(NAME TestAnimationProgressBarSpeedFactor DATA soldier_animations.mdl ARGS --animation-indices=2 --animation-time=0.5 --animation-progress=advanced --animation-speed-factor=1.5 RESOLUTION 400,300 UI)
 # Needs https://gitlab.kitware.com/vtk/vtk/-/merge_requests/12688
 if(VTK_VERSION VERSION_GREATER_EQUAL 9.5.20251006)
   f3d_test(NAME TestMultiFileAnimationNoneMulti DATA bot2.wrl InterpolationTest.glb ARGS --animation-indices=6 --animation-time=0.85 --multi-file-mode=all)
@@ -316,7 +322,7 @@ f3d_test(NAME TestBackdropOpacityMedium DATA suzanne.ply ARGS -n --backdrop-opac
 f3d_test(NAME TestBackdropColor DATA suzanne.ply ARGS -n --backdrop-color=0.5,1.0,0.5 UI)
 
 if(VTK_VERSION VERSION_GREATER_EQUAL 9.5.20251001)
-  f3d_test(NAME TestDefaultConfigFileHDRIFilename DATA dragon.vtu CONFIG config_build HDRI shanghai_bund_1k.hdr UI)
+  f3d_test(NAME TestDefaultConfigFileHDRIFilename DATA dragon.vtu CONFIG config_build HDRI shanghai_bund_1k.hdr UI SKIP_GLES)
 endif()
 
 ## Skinning
@@ -326,32 +332,35 @@ else()
   if(VTK_VERSION VERSION_GREATER_EQUAL 9.4.20241219) # The baseline changed with armature support
     # Strictly speaking, this test can also fail if ran without OpenGL 4.3 support on Windows and Linux
     # Instead of checking MacOS only, we should try to get OpenGL capabilities from CMake later instead
-    f3d_test(NAME TestSkinningManyBones DATA tube_254bones.glb)
+    f3d_test(NAME TestSkinningManyBones DATA tube_254bones.glb SKIP_GLES)
   endif()
 endif()
 
 ## Armature
-f3d_test(NAME TestGLTFRigArmatureNoArmature DATA RiggedFigure.glb ARGS --animation-time=1 --opacity=0.5 -p)
+f3d_test(NAME TestGLTFRigArmatureNoArmature DATA RiggedFigure.glb ARGS --animation-time=1 --opacity=0.5 -p SKIP_GLES) # GLES skipped because of depth peeling
 if(VTK_VERSION VERSION_GREATER_EQUAL 9.4.20241219)
   f3d_test(NAME TestGLTFRigArmature DATA RiggedFigure.glb ARGS --animation-time=1 --armature)
-  f3d_test(NAME TestGLTFRigArmatureWithOpacity DATA RiggedFigure.glb ARGS --animation-time=1 --armature --opacity=0.5 -p)
+  f3d_test(NAME TestGLTFRigArmatureWithOpacity DATA RiggedFigure.glb ARGS --animation-time=1 --armature --opacity=0.5 -p SKIP_GLES) # GLES skipped because of depth peeling
   f3d_test(NAME TestGLTFRigArmatureSphereTube DATA RiggedFigure.glb ARGS --animation-time=1 --armature --point-size=20 --line-width=5)
 endif()
 
 ## HDRI
-f3d_test(NAME TestHDRI DATA suzanne.ply HDRI shanghai_bund_1k.hdr)
-f3d_test(NAME TestHDRICache DATA suzanne.ply HDRI shanghai_bund_1k.hdr DEPENDS TestHDRI)
-f3d_test(NAME TestHDRIBlur DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -u)
+f3d_test(NAME TestHDRI DATA suzanne.ply HDRI shanghai_bund_1k.hdr THRESHOLD 0.07) # Small rendering differences on GLES due to LUT precision
+f3d_test(NAME TestHDRICache DATA suzanne.ply HDRI shanghai_bund_1k.hdr DEPENDS TestHDRI THRESHOLD 0.07) # Small rendering differences on GLES due to LUT precision
+# HDRI ambient lighting must follow render.light.intensity (see https://github.com/f3d-app/f3d/issues/3312)
+f3d_test(NAME TestHDRILightIntensityDimmer DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS --light-intensity=0.1 DEPENDS TestHDRI THRESHOLD 0.07) # Small rendering differences on GLES due to LUT precision
+f3d_test(NAME TestHDRILightIntensityBrighter DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS --light-intensity=2.0 DEPENDS TestHDRI THRESHOLD 0.07) # Small rendering differences on GLES due to LUT precision
+f3d_test(NAME TestHDRIBlur DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -u THRESHOLD 0.07) # Small rendering differences on GLES due to LUT precision
 f3d_test(NAME TestHDRIBlurCoCSmall DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -u --blur-coc=10 --camera-position=-20,0,20)
 f3d_test(NAME TestHDRIBlurCoCMedium DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -u --blur-coc=50 --camera-position=-20,0,20)
-f3d_test(NAME TestHDRIBlurCoCLarge DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -u --blur-coc=100 --camera-position=-20,0,20)
+f3d_test(NAME TestHDRIBlurCoCLarge DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -u --blur-coc=100 --camera-position=-20,0,20 THRESHOLD 0.05) # Small rendering differences on GLES due to LUT precision
 f3d_test(NAME TestHDRIBlurCoCZero DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -u --blur-coc=0 --camera-position=-20,0,20)
-f3d_test(NAME TestHDRIBlurCoCNegative DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -u --blur-coc=-100 --camera-position=-20,0,20)
+f3d_test(NAME TestHDRIBlurCoCNegative DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -u --blur-coc=-100 --camera-position=-20,0,20 THRESHOLD 0.05) # Small rendering differences on GLES due to LUT precision
 f3d_test(NAME TestHDRIBlurRatio DATA suzanne.ply HDRI shanghai_bund_1k.hdr RESOLUTION 600,100 ARGS -u)
-f3d_test(NAME TestHDRIEdges DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -e THRESHOLD 0.06)
-f3d_test(NAME TestHDRI8Bit DATA suzanne.ply HDRI f3d.tif ARGS --color=1.0,0.0,0.0 THRESHOLD 0.08) # Threshold is needed for IBL change after VTK 9.6
-f3d_test(NAME TestHDRIOrient DATA suzanne.stl HDRI shanghai_bund_1k.hdr ARGS --up=+Z)
-f3d_test(NAME TestHDRIToneMapping DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -t)
+f3d_test(NAME TestHDRIEdges DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -e THRESHOLD 0.06 THRESHOLD 0.07) # Small rendering differences on GLES due to LUT precision
+f3d_test(NAME TestHDRI8Bit DATA suzanne.ply HDRI f3d.tif ARGS --color=1.0,0.0,0.0 THRESHOLD 0.1) # Threshold is needed for IBL change after VTK 9.6
+f3d_test(NAME TestHDRIOrient DATA suzanne.stl HDRI shanghai_bund_1k.hdr ARGS --up=+Z THRESHOLD 0.05) # Small rendering differences on GLES due to LUT precision
+f3d_test(NAME TestHDRIToneMapping DATA suzanne.ply HDRI shanghai_bund_1k.hdr ARGS -t THRESHOLD 0.06) # Small rendering differences on GLES due to LUT precision
 
 # Test non existent HDRI, do not add a dummy.png
 f3d_test(NAME TestNonExistentHDRI DATA cow.vtp HDRI dummy.png REGEXP "HDRI file does not exist" NO_BASELINE)
@@ -367,15 +376,15 @@ if(VTK_VERSION VERSION_LESS 9.5.20251001)
 endif()
 
 configure_file("${F3D_SOURCE_DIR}/testing/configs/hdri.json.in" "${CMAKE_BINARY_DIR}/hdri.json")
-f3d_test(NAME TestConfigFileHDRI DATA dragon.vtu CONFIG "${CMAKE_BINARY_DIR}/hdri.json" LONG_TIMEOUT)
+f3d_test(NAME TestConfigFileHDRI DATA dragon.vtu CONFIG "${CMAKE_BINARY_DIR}/hdri.json" LONG_TIMEOUT THRESHOLD 0.05) # Small rendering differences on GLES due to LUT precision
 
 if(F3D_MODULE_EXR)
   f3d_test(NAME TestHDRIEXR DATA suzanne.ply HDRI small_rural_road_1k.exr)
 endif()
 
 f3d_test(NAME TestHDRISkyboxOnly DATA suzanne.ply ARGS --hdri-file=${F3D_SOURCE_DIR}/testing/data/shanghai_bund_1k.hdr --hdri-skybox LONG_TIMEOUT)
-f3d_test(NAME TestHDRIAmbientOnly DATA suzanne.ply ARGS --hdri-file=${F3D_SOURCE_DIR}/testing/data/shanghai_bund_1k.hdr --hdri-ambient LONG_TIMEOUT)
-f3d_test(NAME TestHDRIAmbientOnlyNoBackground DATA suzanne.ply ARGS --hdri-file=${F3D_SOURCE_DIR}/testing/data/shanghai_bund_1k.hdr --hdri-ambient --no-background LONG_TIMEOUT)
+f3d_test(NAME TestHDRIAmbientOnly DATA suzanne.ply ARGS --hdri-file=${F3D_SOURCE_DIR}/testing/data/shanghai_bund_1k.hdr --hdri-ambient LONG_TIMEOUT THRESHOLD 0.06) # Small rendering differences on GLES due to LUT precision
+f3d_test(NAME TestHDRIAmbientOnlyNoBackground DATA suzanne.ply ARGS --hdri-file=${F3D_SOURCE_DIR}/testing/data/shanghai_bund_1k.hdr --hdri-ambient --no-background LONG_TIMEOUT THRESHOLD 0.06) # Small rendering differences on GLES due to LUT precision
 f3d_test(NAME TestHDRINone DATA suzanne.ply ARGS --hdri-file=${F3D_SOURCE_DIR}/testing/data/shanghai_bund_1k.hdr LONG_TIMEOUT)
 
 if(F3D_MODULE_RAYTRACING)
@@ -435,6 +444,41 @@ f3d_test(NAME TestFinalShaderUndefined DATA cow.vtp ARGS --final-shader "undefin
 f3d_test(NAME TestFinalShaderCompilationFailure DATA cow.vtp ARGS --final-shader "vec4 pixel(vec2 uv){}" --verbose REGEXP " build the shader program" NO_BASELINE)
 f3d_test(NAME TestFinalShaderTimeUniform DATA cow.vtp ARGS --final-shader "vec4 pixel(vec2 uv){return vec4(texture(source, uv).rgb * (0.5 + 0.5*cos(time+uv.xyx+vec3(0,2,4))), 1.0)\\\\\\\;}")
 
+## Statefile
+# Round trip: one test saves a statefile, a dependent test loads it back and renders it,
+# checking both that the saved statefile is correct and that its options and camera are applied
+f3d_test(NAME TestStatefileSave DATA cow.vtp NO_BASELINE ARGS -D render.background.color=0,0,1 --camera-position=15,8,15 --camera-focal-point=0.78,-0.44,0 --camera-view-up=0,1,0 --save-statefile=${CMAKE_BINARY_DIR}/Testing/Temporary/TestStatefileSave.json REGEXP "Statefile saved to")
+f3d_test(NAME TestStatefileLoad DEPENDS TestStatefileSave ARGS --load-statefile=${CMAKE_BINARY_DIR}/Testing/Temporary/TestStatefileSave.json)
+
+# Load a known statefile, checking its options are applied
+f3d_test(NAME TestStatefileLoadKnown DATA cow.vtp NO_RENDER NO_BASELINE ARGS --load-statefile=${F3D_SOURCE_DIR}/testing/statefiles/test_statefile.json REGEXP "from statefile options")
+# Command line options take precedence over a loaded statefile
+f3d_test(NAME TestStatefileLoadOverride DATA cow.vtp NO_RENDER NO_BASELINE ARGS --load-statefile=${F3D_SOURCE_DIR}/testing/statefiles/test_statefile.json -D render.background.color=1,0,0 REGEXP "'render.background.color' = '1,0,0' from CLI options")
+# A missing statefile is skipped with a warning instead of failing
+f3d_test(NAME TestStatefileLoadMissing DATA cow.vtp NO_RENDER NO_BASELINE ARGS --load-statefile=${CMAKE_BINARY_DIR}/Testing/Temporary/does_not_exist.json REGEXP "Could not open statefile, skipping")
+# A file that exists but is not a valid statefile is reported and skipped
+f3d_test(NAME TestStatefileLoadInvalidContent DATA cow.vtp NO_RENDER NO_BASELINE ARGS --load-statefile=${F3D_SOURCE_DIR}/testing/data/cow.vtp REGEXP "Could not parse statefile content")
+# `-` writes the statefile to the standard output
+f3d_test(NAME TestStatefileSaveStdout DATA cow.vtp NO_RENDER NO_BASELINE ARGS --save-statefile=- REGEXP "\"options\"")
+# `-` reads the statefile from the standard input (`cat state.json | f3d --load-statefile=-`). The working
+# directory is the statefile directory so the relative paths it contains resolve correctly
+f3d_test(NAME TestStatefileLoadStdin PIPED_ARG --load-statefile= DATA ../statefiles/test_statefile.json WORKING_DIR ${F3D_SOURCE_DIR}/testing/statefiles NO_RENDER NO_BASELINE REGEXP "background.color' = '#0000ff' from statefile options" PIPED)
+# Missing parent directories of the statefile path are created
+f3d_test(NAME TestStatefileSaveCreatesDir DATA cow.vtp NO_RENDER NO_BASELINE ARGS --save-statefile=${CMAKE_BINARY_DIR}/Testing/Temporary/TestStatefileSaveCreatesDir/sub/cow.json REGEXP "Statefile saved to")
+
+# File groups: one test saves a statefile with two file groups (only the first one loaded), a
+# dependent test loads it back with no file argument and navigates to the second group. VTKXMLVTU
+# only appears if that not-currently-loaded group was restored from the statefile
+f3d_test(NAME TestStatefileFileGroupsSave DATA cow.vtp dragon.vtu NO_RENDER NO_BASELINE ARGS --save-statefile=${CMAKE_BINARY_DIR}/Testing/Temporary/TestStatefileFileGroups.json REGEXP "Statefile saved to")
+f3d_test(NAME TestStatefileFileGroupsLoad SCRIPT DEPENDS TestStatefileFileGroupsSave NO_BASELINE ARGS --load-statefile=${CMAKE_BINARY_DIR}/Testing/Temporary/TestStatefileFileGroups.json --verbose REGEXP "VTKXMLVTU")
+
+# Camera reframing: the statefile camera is a one-shot restore hint, not a persistent option. One
+# test saves a statefile with two file groups (its camera framed on the first group), a dependent
+# test loads it and navigates to the second group, which must be reframed instead of viewed through
+# the restored camera
+f3d_test(NAME TestStatefileCameraReframeSave DATA suzanne.obj cow.vtp NO_BASELINE ARGS --save-statefile=${CMAKE_BINARY_DIR}/Testing/Temporary/TestStatefileCameraReframe.json REGEXP "Statefile saved to")
+f3d_test(NAME TestStatefileCameraReframe SCRIPT DEPENDS TestStatefileCameraReframeSave ARGS --load-statefile=${CMAKE_BINARY_DIR}/Testing/Temporary/TestStatefileCameraReframe.json THRESHOLD 0.05)
+
 ## Command Script
 f3d_test(NAME TestCommandScriptBasic SCRIPT DATA dragon.vtu) # roll_camera 90;toggle ui.scalar_bar;print_scene_info
 f3d_test(NAME TestCommandScriptElevation SCRIPT DATA dragon.vtu) # elevation_camera 90;toggle ui.scalar_bar;print_scene_info
@@ -482,6 +526,44 @@ f3d_test(NAME TestCommandScriptSetCameraBottom SCRIPT DATA dragon.vtu) # set_cam
 f3d_test(NAME TestCommandScriptSetCameraLeft SCRIPT DATA dragon.vtu) # set_camera left
 f3d_test(NAME TestCommandScriptCycleCameraIndex SCRIPT DATA Cameras.gltf) # cycle scene.camera.index;cycle scene.camera.index;reload_current_file_group
 f3d_test(NAME TestCommandScriptIncreaseDecreaseCameraIndex SCRIPT DATA Cameras.gltf) # increase scene.camera.index;increase scene.camera.index;increase.camera.index;decrease.camera.index;reload_current_file_group
+f3d_test(NAME TestCommandScriptOpacityMap SCRIPT DATA vase_4comp.vti ARGS -v) # set model.scivis.opacity_map 0,0.03,1,1
+
+# Statefile interactor command load_statefile, each test covers a distinct behavior. The save_statefile
+# command shares its implementation with the --save-statefile option covered above, the tests below
+# instead focus on the load_statefile command which restores a statefile into the running session
+# load_statefile with an explicit path loads the statefile files (cow.vtp), replacing the loaded dragon.vtu
+f3d_test(NAME TestCommandScriptLoadStatefile SCRIPT DATA dragon.vtu WORKING_DIR ${F3D_SOURCE_DIR}/testing ARGS --verbose REGEXP "cow.vtp" NO_BASELINE)
+# load_statefile with no argument falls back to the --statefile-filename path
+f3d_test(NAME TestCommandScriptLoadStatefileFromOption SCRIPT DATA dragon.vtu WORKING_DIR ${F3D_SOURCE_DIR}/testing ARGS --statefile-filename=${F3D_SOURCE_DIR}/testing/statefiles/test_statefile.json --verbose REGEXP "cow.vtp" NO_BASELINE)
+# load_statefile resolves the {n} template to the most recent existing statefile
+f3d_test(NAME TestCommandScriptLoadStatefileMostRecent SCRIPT DATA cow.vtp ARGS --statefile-filename=${CMAKE_BINARY_DIR}/Testing/Temporary/TestStatefileMostRecent/state_{n}.json --verbose REGEXP "from statefile options" NO_BASELINE)
+# load_statefile applies over the current interactor state, here overriding a `set` tweak
+f3d_test(NAME TestCommandScriptLoadStatefileOverridesTweak SCRIPT DATA cow.vtp WORKING_DIR ${F3D_SOURCE_DIR}/testing ARGS --verbose REGEXP "background.color' = '#0000ff' from statefile options" NO_BASELINE)
+# load_statefile of a missing file is skipped with a warning
+f3d_test(NAME TestCommandScriptLoadStatefileMissing SCRIPT DATA cow.vtp WORKING_DIR ${F3D_SOURCE_DIR}/testing ARGS --verbose REGEXP "Could not open statefile, skipping" NO_BASELINE)
+# load_statefile with an out of range file group index falls back to the first group
+f3d_test(NAME TestCommandScriptLoadStatefileInvalidGroup SCRIPT DATA cow.vtp WORKING_DIR ${F3D_SOURCE_DIR}/testing ARGS --verbose REGEXP "cow.vtp" NO_BASELINE)
+# save_statefile with no argument and no --statefile-filename falls back to a default auto filename
+f3d_test(NAME TestCommandScriptSaveStatefileAutoFilename SCRIPT DATA cow.vtp WORKING_DIR ${CMAKE_BINARY_DIR}/Testing/Temporary ARGS --verbose REGEXP "Statefile saved to" NO_BASELINE)
+# save_statefile_dialog/load_statefile_dialog open a file dialog, only available with tinyfiledialogs
+if(F3D_MODULE_TINYFILEDIALOGS)
+  f3d_test(NAME TestCommandScriptStatefileDialog SCRIPT DATA cow.vtp ARGS --verbose
+    ENV "CTEST_SAVE_STATEFILE_DIALOG_FILE=${CMAKE_BINARY_DIR}/Testing/Temporary/TestStatefileDialog"
+        "CTEST_LOAD_STATEFILE_DIALOG_FILE=${CMAKE_BINARY_DIR}/Testing/Temporary/TestStatefileDialog.json"
+    REGEXP "background.color' = '#0000ff' from statefile options" NO_BASELINE)
+else()
+  # Without tinyfiledialogs the dialog commands report a clear error instead of disappearing
+  f3d_test(NAME TestCommandScriptStatefileDialogUnavailable SCRIPT DATA cow.vtp ARGS --verbose REGEXP "File dialog is not available" NO_BASELINE)
+endif()
+# save_statefile to a path that cannot be written (a directory) reports the error
+f3d_test(NAME TestCommandScriptSaveStatefileError SCRIPT DATA cow.vtp WORKING_DIR ${F3D_SOURCE_DIR}/testing ARGS --verbose REGEXP "Could not save statefile" NO_BASELINE)
+
+# The clipboard round-trip needs a real onscreen window for the X11 selection to work, it fails with
+# the offscreen backends (egl, osmesa), so only run it where an onscreen window is available, ie on
+# Windows, macOS, or Linux with GLX tests enabled (where the auto backend resolves to GLX).
+if(F3D_MODULE_CLIP AND (WIN32 OR APPLE OR F3D_TESTING_ENABLE_GLX_TESTS))
+  f3d_test(NAME TestCommandScriptStatefileClipboard SCRIPT DATA cow.vtp ARGS --verbose REGEXP "background.color' = '#0000ff' from statefile options" NO_BASELINE)
+endif()
 
 ## Tests to increase coverage
 # Output option test
@@ -768,9 +850,9 @@ f3d_test(NAME TestVersionPrecedenceWithUnknownOption ARGS --version --unknown RE
 
 # PIPED error code path
 if(VTK_VERSION VERSION_GREATER_EQUAL 9.4.20250501)
-  f3d_test(NAME TestPipedForced DATA suzanne.ply ARGS --force-reader=PLYReader --verbose PIPED PLYReader REGEXP "Forcing reader" NO_BASELINE)
-  f3d_test(NAME TestPipedForcedInvalid DATA suzanne.ply ARGS --force-reader=invalid PIPED invalid REGEXP "is not a valid force reader" NO_BASELINE)
-  f3d_test(NAME TestPipedForcedInvalidStream DATA beach.nrrd ARGS --force-reader=Nrrd PIPED Nrrd REGEXP "does not support reading streams" NO_BASELINE)
+  f3d_test(NAME TestPipedForced DATA suzanne.ply ARGS --force-reader=PLYReader --verbose PIPED_READER PLYReader REGEXP "Forcing reader" NO_BASELINE PIPED)
+  f3d_test(NAME TestPipedForcedInvalid DATA suzanne.ply ARGS --force-reader=invalid PIPED_READER invalid REGEXP "is not a valid force reader" NO_BASELINE PIPED)
+  f3d_test(NAME TestPipedForcedInvalidStream DATA beach.nrrd ARGS --force-reader=Nrrd PIPED_READER Nrrd REGEXP "does not support reading streams" NO_BASELINE PIPED)
 endif()
 
 ## Filesystem error code path
@@ -788,10 +870,11 @@ if(NOT WIN32)
   f3d_test(NAME TestConfigTooLong CONFIG ${_f3d_test_invalid_folder}/invalid.json REGEXP "File name too long" NO_RENDER NO_BASELINE)
 endif()
 
+# SKIP_GLES because FPS counter is not supported in GLES
 f3d_test(NAME TestFPS DATA suzanne.ply ARGS -z --font-scale=0.35
-  --font-file=${F3D_SOURCE_DIR}/testing/data/Crosterian.ttf UI THRESHOLD 0.2)
+  --font-file=${F3D_SOURCE_DIR}/testing/data/Crosterian.ttf UI SKIP_GLES THRESHOLD 0.2)
 # Require improved importer support https://gitlab.kitware.com/vtk/vtk/-/merge_requests/11303
 if(VTK_VERSION VERSION_GREATER_EQUAL 9.3.20240910)
   f3d_test(NAME TestFPSWithBadge DATA invalid_body.vtp ARGS -z --font-scale=0.35
-    --font-file=${F3D_SOURCE_DIR}/testing/data/Crosterian.ttf NO_DATA_FORCE_RENDER UI THRESHOLD 0.2)
+    --font-file=${F3D_SOURCE_DIR}/testing/data/Crosterian.ttf NO_DATA_FORCE_RENDER UI SKIP_GLES THRESHOLD 0.2)
 endif()

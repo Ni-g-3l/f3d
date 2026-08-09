@@ -69,6 +69,7 @@ int test_interactor()
   (void)delta;
 
   f3d_interactor_trigger_notification(interactor, "foo", "bar", 3.0);
+  f3d_interactor_set_notification_callback(interactor, NULL, NULL);
 
   f3d_interactor_play_interaction(interactor, "/nonexistent.log", 1.0 / 30.0);
   f3d_interactor_record_interaction(interactor, "/tmp/test_interaction.log");

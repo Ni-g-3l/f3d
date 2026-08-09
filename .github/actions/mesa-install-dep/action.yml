@@ -42,7 +42,7 @@ runs:
       uses: actions/cache/restore@v6
       with:
         path: dependencies/mesa_install
-        key: mesa-${{steps.mesa_ver.outputs.extract}}-${{runner.os}}-${{inputs.cpu}}-${{steps.global_idx.outputs.extract}}-8
+        key: mesa-${{steps.mesa_ver.outputs.extract}}-${{runner.os}}-${{inputs.cpu}}-${{steps.global_idx.outputs.extract}}-12
 
     - name: Setup MSVC (Windows)
       if: steps.cache-mesa.outputs.cache-hit != 'true' && runner.os == 'Windows'
@@ -67,15 +67,18 @@ runs:
       shell: bash
       run: choco install winflexbison3 --no-progress -y
 
-    - name: Install Flex/Bison (Linux)
-      if: steps.cache-mesa.outputs.cache-hit != 'true' && runner.os == 'Linux'
-      shell: bash
-      run: apt-get install -y bison byacc flex pkg-config ninja-build libzstd-dev
-
     - name: Checkout mesa
       if: steps.cache-mesa.outputs.cache-hit != 'true'
       shell: bash
       run: git clone --recurse-submodules --depth 1 --branch mesa-${{steps.mesa_ver.outputs.extract}} https://gitlab.freedesktop.org/mesa/mesa.git dependencies/mesa
+
+    # Sometimes mesa hangs on Windows at exit
+    # Here's a related MR: https://gitlab.freedesktop.org/mesa/mesa/-/merge_requests/12731
+    - name: Patch hang on Windows
+      if: steps.cache-mesa.outputs.cache-hit != 'true' && runner.os == 'Windows'
+      working-directory: ${{github.workspace}}/dependencies/mesa
+      shell: bash
+      run: patch -p1 < $GITHUB_ACTION_PATH/windows-hang.patch
 
     - name: Setup mesa
       if: steps.cache-mesa.outputs.cache-hit != 'true'
@@ -98,6 +101,7 @@ runs:
         meson setup mesa_build mesa
         --prefix=$(pwd)/mesa_install
         --buildtype=release
+        --libdir=lib
         -Db_ndebug=true
         -Dosmesa=true
         -Dcpp_rtti=false

@@ -13,6 +13,26 @@ public class Options {
         mNativeAddress = nativeAddress;
     }
 
+    /** Thrown when the requested option name does not exist. */
+    public static class InexistentException extends F3DException {
+        public InexistentException(String message) { super(message); }
+    }
+
+    /** Thrown when an option's type is incompatible with the requested operation. */
+    public static class IncompatibleException extends F3DException {
+        public IncompatibleException(String message) { super(message); }
+    }
+
+    /** Thrown when a string representation cannot be parsed into the option's type. */
+    public static class ParsingException extends F3DException {
+        public ParsingException(String message) { super(message); }
+    }
+
+    /** Thrown when a get operation is called on an option with no value set. */
+    public static class NoValueException extends F3DException {
+        public NoValueException(String message) { super(message); }
+    }
+
     /**
      * Enumeration of supported domain style.
      */
@@ -282,6 +302,42 @@ public class Options {
      * @throws IllegalArgumentException if the option name does not exist or doesn't have an enum domain
      */
     public native List<String> getEnumDomain(String name);
+
+    /**
+     * Structure holding a range domain: min, max and increment.
+     */
+    public static final class DomainRange<T extends Number> {
+        public final T min;
+        public final T max;
+        public final T increment;
+
+        DomainRange(T min, T max, T increment) {
+            this.min = min;
+            this.max = max;
+            this.increment = increment;
+        }
+    }
+
+    /**
+     * Return the range domain of the option as a DomainRange of Double.
+     * Matches double and ratio domains, as ratio does not exist in Java.
+     *
+     * @param name the name of the option to get the range domain from
+     * @return the range domain of the option
+     * @throws IllegalArgumentException if the option name does not exist, doesn't have a range
+     *         domain, or if the domain is not a double or ratio domain
+     */
+    public native DomainRange<Double> getRangeDomainAsDouble(String name);
+
+    /**
+     * Return the range domain of the option as a DomainRange of Integer.
+     *
+     * @param name the name of the option to get the range domain from
+     * @return the range domain of the option
+     * @throws IllegalArgumentException if the option name does not exist, doesn't have a range
+     *         domain, or if the domain is not an int domain
+     */
+    public native DomainRange<Integer> getRangeDomainAsInt(String name);
 
     /**
      * Increase the specified option if it has a range or index domain

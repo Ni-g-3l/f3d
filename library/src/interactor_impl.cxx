@@ -4,6 +4,7 @@
 #include "engine.h"
 #include "log.h"
 #include "scene_impl.h"
+#include "statefile.h"
 #include "utils.h"
 #include "window_impl.h"
 
@@ -441,6 +442,24 @@ public:
   }
 
   //----------------------------------------------------------------------------
+  void AddNotification(
+    const std::string& desc, const std::string& value, const std::string& bind, double duration)
+  {
+    if (this->NotificationCallback)
+    {
+      if (!this->NotificationCallback(desc, value, bind, duration))
+      {
+        return;
+      }
+    }
+
+    vtkRenderWindow* renWin = this->Window.GetRenderWindow();
+    vtkF3DRenderer* ren = vtkF3DRenderer::SafeDownCast(renWin->GetRenderers()->GetFirstRenderer());
+
+    ren->AddNotification(desc, value, bind, duration);
+  }
+
+  //----------------------------------------------------------------------------
   void TriggerBinding(const std::string& interaction, const std::string& argsString)
   {
     mod_t mod = mod_t::NONE;
@@ -501,12 +520,8 @@ public:
       if (binding.Notify && binding.DocumentationCallback)
       {
         // trigger notification
-        vtkRenderWindow* renWin = this->Window.GetRenderWindow();
-        vtkF3DRenderer* ren =
-          vtkF3DRenderer::SafeDownCast(renWin->GetRenderers()->GetFirstRenderer());
-
         auto [desc, value] = binding.DocumentationCallback();
-        ren->AddNotification(desc, value, bind.format(), 3.0);
+        this->AddNotification(desc, value, bind.format(), 3.0);
       }
     }
 
@@ -657,6 +672,9 @@ public:
   std::atomic<bool> StopRequested = false;
 
   double CallbackDeltaTime = 1.0 / 30; /* Default DeltaTime (30fps) */
+
+  std::function<bool(const std::string&, const std::string&, const std::string&, double)>
+    NotificationCallback = nullptr;
 };
 
 //----------------------------------------------------------------------------
@@ -1289,6 +1307,91 @@ interactor& interactor_impl::initCommands()
     },
     command_documentation_t{ "cycle_verbose_level", "cycle between verbose levels" });
 
+  // XXX: Basic statefile commands, F3DStarter overrides them to also handle its file groups,
+  // filename templating and file dialogs
+  this->addCommand(
+    "save_statefile",
+    [&](const std::vector<std::string>& args)
+    {
+      check_args(args, 1, "save_statefile");
+      try
+      {
+        const std::string content = captureStateContent(
+          this->Internals->Scene, this->Internals->Window, this->Internals->Options);
+        f3d::engine::state::fromString(content).toFile(args[0]);
+        log::info("Statefile saved to ", args[0]);
+      }
+      catch (const f3d::engine::statefile_exception& ex)
+      {
+        log::error("Could not save statefile: ", ex.what());
+      }
+    },
+    command_documentation_t{
+      "save_statefile file", "save the current state into the provided file" });
+
+  this->addCommand(
+    "load_statefile",
+    [&](const std::vector<std::string>& args)
+    {
+      check_args(args, 1, "load_statefile");
+      try
+      {
+        const f3d::engine::state st = f3d::engine::state::fromFile(args[0]);
+        restoreStateContent(
+          this->Internals->Scene, this->Internals->Window, this->Internals->Options, st.toString());
+        log::info("Statefile loaded from ", args[0]);
+      }
+      catch (const f3d::engine::statefile_exception& ex)
+      {
+        log::error("Could not load statefile: ", ex.what());
+      }
+    },
+    command_documentation_t{ "load_statefile file", "restore the state from the provided file" });
+
+#if F3D_MODULE_CLIP
+  this->addCommand(
+    "save_statefile_to_clipboard",
+    [&](const std::vector<std::string>& args)
+    {
+      check_args(args, 0, "save_statefile_to_clipboard");
+      try
+      {
+        const std::string content = captureStateContent(
+          this->Internals->Scene, this->Internals->Window, this->Internals->Options);
+        f3d::engine::state::fromString(content).toClipboard();
+        log::info("Statefile copied to the clipboard");
+      }
+      catch (const f3d::engine::statefile_exception& ex)
+      {
+        // Unreachable in testing
+        log::error(ex.what());
+      }
+    },
+    command_documentation_t{
+      "save_statefile_to_clipboard", "save the current state into the system clipboard" });
+
+  this->addCommand(
+    "load_statefile_from_clipboard",
+    [&](const std::vector<std::string>& args)
+    {
+      check_args(args, 0, "load_statefile_from_clipboard");
+      try
+      {
+        const f3d::engine::state st = f3d::engine::state::fromClipboard();
+        restoreStateContent(
+          this->Internals->Scene, this->Internals->Window, this->Internals->Options, st.toString());
+        log::info("Statefile loaded from the clipboard");
+      }
+      catch (const f3d::engine::statefile_exception& ex)
+      {
+        // Unreachable in testing
+        log::error(ex.what());
+      }
+    },
+    command_documentation_t{
+      "load_statefile_from_clipboard", "restore the state from the system clipboard" });
+#endif
+
   this->addCommand(
     "help",
     [&](const std::vector<std::string>& args)
@@ -1728,12 +1831,17 @@ interactor& interactor_impl::triggerNotification(
 {
   if (!desc.empty())
   {
-    vtkRenderWindow* renWin = this->Internals->Window.GetRenderWindow();
-    vtkF3DRenderer* ren = vtkF3DRenderer::SafeDownCast(renWin->GetRenderers()->GetFirstRenderer());
-
-    ren->AddNotification(desc, value, {}, duration);
+    this->Internals->AddNotification(desc, value, {}, duration);
   }
 
+  return *this;
+}
+
+//----------------------------------------------------------------------------
+interactor& interactor_impl::setNotificationCallback(
+  std::function<bool(const std::string&, const std::string&, const std::string&, double)> callback)
+{
+  this->Internals->NotificationCallback = std::move(callback);
   return *this;
 }
 

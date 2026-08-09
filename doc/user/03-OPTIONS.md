@@ -53,6 +53,18 @@ Do not read any configuration file and consider only the command line options.
 
 Do not render anything and quit just after loading the first file, use with --verbose to recover information about a file.
 
+### `--load-statefile=<file path>` (_string_)
+
+Restore the application state from a statefile right after starting, then continue running. The statefile is applied above configuration files but below command line options. The restored window size is overridden by an explicit `--resolution`, and the restored window position by an explicit `--position`. If `-` is specified instead of a filename, the statefile is read from the standard input. If the file does not exist, it is skipped with a warning.
+
+### `--save-statefile=<file path>` (_string_)
+
+Save the application state to a statefile right after loading, then continue running. The saved state includes the options, camera, window size and all file groups, including the ones not currently loaded. Supports the same [template variables](#filename-templating) as `--output`. If `-` is specified instead of a filename, the statefile is written to the standard output.
+
+### `--statefile-filename=<file path>` (_string_, default: empty)
+
+Default filename used by the `save_statefile` and `load_statefile` [commands](07-COMMANDS.md) when none is provided, resolved relative to the current working directory. Supports the same [template variables](#filename-templating) as `--output`. If `-` is specified instead of a filename, the statefile is written to the standard output (save) or read from the standard input (load). When left empty, the `save_statefile` and `load_statefile` commands fall back to a default filename; picking a file through a dialog is instead available with the dedicated `save_statefile_dialog` and `load_statefile_dialog` commands (requires a build with the `tinyfiledialogs` module).
+
 ### `--max-size=<size in MiB>` (_int_, default: `-1`)
 
 Prevent F3D to load a file bigger than the provided size in Mib, leave empty for unlimited, useful for thumbnails.
@@ -583,7 +595,7 @@ Importer may set a default value depending on file type. If a default value exis
 
 ### `--checkerboard` (_bool_, default: `false`)
 
-Override model's texture with a checkerboard texture.
+Override model's texture with a checkerboard texture. Anti-aliasing is recommended.
 
 #### compare
 
@@ -617,11 +629,11 @@ Ignored if `--hdri-skybox` is enabled.
 
 ### `--resolution=<width,height>` (_vector\<double\>_, default: `1000, 600`)
 
-Set the _window resolution_.
+Set the _window resolution_. When closing an interactive window, its resolution is remembered in a [cache file](#caches), and restored on the next start, unless it is set in a configuration file, a statefile or on the command line. Rendering to a file with `--output` or `--reference` is unaffected.
 
 ### `--position=<x,y>` (_vector\<double\>_)
 
-Set the _window position_ (top left corner) , in pixels, starting from the top left of your screens.
+Set the _window position_ (top left corner) , in pixels, starting from the top left of your screens. When closing an interactive window, its position is remembered in a [cache file](#caches), and restored on the next start, unless it is set in a configuration file, a statefile or on the command line. Rendering to a file with `--output` or `--reference` is unaffected.
 
 ### `-z`, `--fps` (_bool_, default: `false`)
 
@@ -711,7 +723,7 @@ Blur circle of confusion radius.
 
 ### `--light-intensity` (_double_, default: `1.0`)
 
-_Adjust the intensity_ of every light in the scene (except HDRI).
+_Adjust the intensity_ of every light in the scene, including HDRI image-based lighting.
 
 #### compare
 
@@ -1082,7 +1094,7 @@ cat path/to/file.glb --force-reader=GLB | f3d - --output=- | display
 
 ## Filename templating
 
-The destination filename used by `--output` or to save screenshots using `--screenshot-filename` can use the following template variables:
+The destination filename used by `--output`, to save screenshots using `--screenshot-filename`, or to save statefiles using `--save-statefile`/`--statefile-filename` can use the following template variables:
 
 - `{app}`: application name (ie. `F3D`)
 - `{version}`: application version (eg. `2.4.0`)
@@ -1103,13 +1115,41 @@ consecutive screenshots are going to be saved as `F3D/hello_1.png`, `F3D/hello_2
 
 Model related variables will be replaced by `no_file` if no file is loaded and `multi_file` if multiple files are loaded using the `multi-file-mode` option.
 
-## HDRI Caches
+When loading a statefile (`--load-statefile`/`load_statefile`), the `{n}` variable resolves to the most recent existing file, instead of the next available one used when saving. This means that, with the default `{n}` template, saving then loading a statefile round-trips to the same file.
+
+## Caches
 
 When using HDRI related options, F3D will create and use a cache directory to store related data in order to speed up rendering.
-These cache files can be safely removed at the cost of recomputing them on next use.
+
+F3D also stores the geometry of the last closed interactive window in a `cache.json` file, in the same directory, so that it can be restored on the next start, see `--resolution` and `--position`. Its `window` entry uses the same layout as in [statefiles](#statefiles):
+
+```json
+{
+  "window": {
+    "width": 1000,
+    "height": 600,
+    "left": 100,
+    "top": 50
+  }
+}
+```
+
+These cache files can be safely removed, at the cost of recomputing the HDRI data on next use and of losing the cached window geometry.
 
 The cache directory location is as follows, in order, using the first defined environment variables:
 
 - Windows: `%LOCALAPPDATA%\f3d`
 - Linux: `${XDG_CACHE_HOME}/f3d`,`${HOME}/.cache/f3d`
 - macOS: `${HOME}/Library/Caches/f3d`
+
+## Statefiles
+
+A statefile is a JSON file that captures a session so it can be restored later, using `--save-statefile`/`--load-statefile`
+or the `save_statefile`/`load_statefile` [commands](07-COMMANDS.md).
+
+A libf3d statefile (`engine::dump`/`engine::load`) contains the added `files`, the `camera` and the `options`.
+File paths are stored relatively to the statefile directory when possible, and resolved on load.
+Content added from memory (meshes, buffers) is not captured.
+
+The F3D application adds a `file_groups` entry storing all file groups, including the ones not currently loaded,
+so it can restore the whole navigation state. This entry is ignored when a libf3d statefile is loaded by the library.

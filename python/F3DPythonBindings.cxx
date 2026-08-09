@@ -326,6 +326,19 @@ PYBIND11_MODULE(pyf3d, module)
     .def("has_domain", &f3d::options::hasDomain)
     .def("get_domain_style", &f3d::options::getDomainStyle)
     .def("get_enum_domain", &f3d::options::getEnumDomain)
+    .def("get_range_domain",
+      [](const f3d::options& opts, std::string_view name) -> py::tuple
+      {
+        f3d::options::DomainRange<f3d::option_variant_t> domain = opts.getRangeDomain(name);
+        // min, max and increment all hold the same alternative (int or double)
+        return std::visit(
+          [&domain](const auto& min) -> py::tuple
+          {
+            using T = std::decay_t<decltype(min)>;
+            return py::make_tuple(min, std::get<T>(domain.max), std::get<T>(domain.increment));
+          },
+          domain.min);
+      })
     .def("increase", &f3d::options::increase)
     .def("decrease", &f3d::options::decrease)
     .def("cycle", &f3d::options::cycle)
@@ -346,7 +359,6 @@ PYBIND11_MODULE(pyf3d, module)
     .def_static("tokenize", &f3d::utils::tokenize, py::arg("str"), py::arg("keep_comments") = true)
     .def_static(
       "glob_to_regex", &f3d::utils::globToRegex, py::arg("glob"), py::arg("path_separator") = '/')
-    .def_static("get_dpi_scale", &f3d::utils::getDPIScale)
     .def_static("get_env", &f3d::utils::getEnv)
     .def_static("get_known_folder", &f3d::utils::getKnownFolder);
 
@@ -436,6 +448,23 @@ PYBIND11_MODULE(pyf3d, module)
       "Disable the camera interaction")
     .def("set_event_loop_user_callback", &f3d::interactor::setEventLoopUserCallback,
       "Set the user callback of the event loop", py::arg("user_callback") = nullptr)
+    .def(
+      "set_notification_callback",
+      [](f3d::interactor& interactor, py::object callback)
+      {
+        if (callback.is_none())
+        {
+          interactor.setNotificationCallback(nullptr);
+          return;
+        }
+
+        auto cb = [=](const std::string& desc, const std::string& value, const std::string& bind,
+                    double duration) -> bool
+        { return py::bool_(callback(desc, value, bind, duration)); };
+
+        interactor.setNotificationCallback(cb);
+      },
+      "Set the notification callback (desc, value, bind, duration) -> bool", py::arg("callback"))
     .def("trigger_mod_update", &f3d::interactor::triggerModUpdate, "Trigger a key modifier update")
     .def("trigger_mouse_button", &f3d::interactor::triggerMouseButton, "Trigger a mouse button")
     .def(
@@ -772,11 +801,24 @@ PYBIND11_MODULE(pyf3d, module)
     .def_readwrite("intensity", &f3d::light_state_t::intensity)
     .def_readwrite("switch_state", &f3d::light_state_t::switchState);
 
+  // f3d::node_state_t
+  py::class_<f3d::node_state_t>(module, "NodeState")
+    .def(py::init<>())
+    .def_readonly("id", &f3d::node_state_t::id)
+    .def_readonly("parent_id", &f3d::node_state_t::parentId)
+    .def_readonly("level", &f3d::node_state_t::level)
+    .def_readonly("label", &f3d::node_state_t::label)
+    .def_readonly("visible", &f3d::node_state_t::visible)
+    .def_readonly("has_children", &f3d::node_state_t::hasChildren)
+    .def_readonly("collapsed", &f3d::node_state_t::collapsed);
+
   // f3d::scene
   py::class_<f3d::scene, std::unique_ptr<f3d::scene, py::nodelete>> scene(module, "Scene");
   scene //
     .def("supports", &f3d::scene::supports)
     .def("clear", &f3d::scene::clear)
+    .def("get_added_files", &f3d::scene::getAddedFiles,
+      "Return the list of files currently added to the scene")
     .def("add", py::overload_cast<const std::filesystem::path&>(&f3d::scene::add),
       "Add a file the scene", py::arg("file_path"))
     .def("add", py::overload_cast<const std::vector<std::filesystem::path>&>(&f3d::scene::add),
@@ -821,7 +863,12 @@ PYBIND11_MODULE(pyf3d, module)
       py::arg("light_state"))
     .def("get_light", &f3d::scene::getLight, "Get a light from the scene", py::arg("index"))
     .def("get_light_count", &f3d::scene::getLightCount, "Get the number of lights in the scene")
-    .def("remove_all_lights", &f3d::scene::removeAllLights, "Remove all lights from the scene");
+    .def("remove_all_lights", &f3d::scene::removeAllLights, "Remove all lights from the scene")
+    .def("get_scene_hierarchy", &f3d::scene::getSceneHierarchy,
+      "Return the scene hierarchy of all added files, in depth-first pre-order")
+    .def("set_node_visibility", &f3d::scene::setNodeVisibility,
+      "Set the visibility of a scene hierarchy node and of its subtree", py::arg("node_id"),
+      py::arg("visible"));
 
   // f3d::camera_state_t
   py::class_<f3d::camera_state_t>(module, "CameraState")
@@ -881,24 +928,30 @@ PYBIND11_MODULE(pyf3d, module)
     .def_property_readonly("offscreen", &f3d::window::isOffscreen)
     .def_property_readonly("camera", &f3d::window::getCamera, py::return_value_policy::reference)
     .def_property(
-      "size",
-      [](const f3d::window& win) { return std::make_pair(win.getWidth(), win.getHeight()); },
+      "size", [](const f3d::window& win) { return win.getSize(); },
       [](f3d::window& win, std::pair<int, int> wh) { win.setSize(wh.first, wh.second); })
     .def_property("width", &f3d::window::getWidth,
       [](f3d::window& win, int w) { win.setSize(w, win.getHeight()); })
     .def_property("height", &f3d::window::getHeight,
       [](f3d::window& win, int h) { win.setSize(win.getWidth(), h); })
+    .def_property(
+      "position", [](const f3d::window& win) { return win.getPosition(); },
+      [](f3d::window& win, std::pair<int, int> xy) { win.setPosition(xy.first, xy.second); })
+    .def_property("left", &f3d::window::getLeft,
+      [](f3d::window& win, int x) { win.setPosition(x, win.getTop()); })
+    .def_property("top", &f3d::window::getTop,
+      [](f3d::window& win, int y) { win.setPosition(win.getLeft(), y); })
     .def("render", &f3d::window::render, "Render the window")
     .def("render_to_image", &f3d::window::renderToImage, "Render the window to an image",
       py::arg("no_background") = false)
-    .def("set_position", &f3d::window::setPosition)
     .def("set_icon", &f3d::window::setIcon,
       "Set the icon of the window using a memory buffer representing a PNG file")
     .def("set_window_name", &f3d::window::setWindowName, "Set the window name")
     .def("get_world_from_display", &f3d::window::getWorldFromDisplay,
       "Get world coordinate point from display coordinate")
     .def("get_display_from_world", &f3d::window::getDisplayFromWorld,
-      "Get display coordinate point from world coordinate");
+      "Get display coordinate point from world coordinate")
+    .def("get_dpi_scale", &f3d::window::getDPIScale, "Get the DPI scale of the window");
 
   // libInformation
   py::class_<f3d::engine::libInformation>(module, "LibInformation")
@@ -924,6 +977,19 @@ PYBIND11_MODULE(pyf3d, module)
 
   // f3d::engine
   py::class_<f3d::engine> engine(module, "Engine");
+
+  py::class_<f3d::engine::state>(engine, "State")
+    .def_static("from_string", &f3d::engine::state::fromString, "Build a state from a JSON string",
+      py::arg("content"))
+    .def_static("from_file", &f3d::engine::state::fromFile, "Build a state from a JSON statefile",
+      py::arg("file_path"))
+    .def_static("from_clipboard", &f3d::engine::state::fromClipboard,
+      "Build a state from the JSON content of the system clipboard")
+    .def("to_string", &f3d::engine::state::toString, "Return the state as a JSON string")
+    .def("to_file", &f3d::engine::state::toFile, "Write the state as a JSON statefile",
+      py::arg("file_path"))
+    .def(
+      "to_clipboard", &f3d::engine::state::toClipboard, "Copy the state into the system clipboard");
 
   engine //
     .def_static("create", &f3d::engine::create, "Create an engine with a automatic window",
@@ -960,7 +1026,8 @@ PYBIND11_MODULE(pyf3d, module)
       "Create an engine with an existing EGL context (Windows/Linux only)")
     .def_static("create_external_osmesa", &f3d::engine::createExternalOSMesa,
       "Create an engine with an existing OSMesa context (Windows/Linux only)")
-    .def("set_cache_path", &f3d::engine::setCachePath, "Set the cache path directory")
+    .def_property("cache_path", &f3d::engine::getCachePath,
+      [](f3d::engine& eng, const std::filesystem::path& path) { eng.setCachePath(path); })
     .def_property("options", &f3d::engine::getOptions,
       py::overload_cast<const f3d::options&>(&f3d::engine::setOptions),
       py::return_value_policy::reference)
@@ -968,6 +1035,9 @@ PYBIND11_MODULE(pyf3d, module)
     .def_property_readonly("scene", &f3d::engine::getScene, py::return_value_policy::reference)
     .def_property_readonly(
       "interactor", &f3d::engine::getInteractor, py::return_value_policy::reference)
+    .def("dump", &f3d::engine::dump, "Capture the engine state into a State")
+    .def("load", &f3d::engine::load, "Restore the engine from a State", py::arg("state"),
+      py::return_value_policy::reference)
     .def_static("load_plugin", &f3d::engine::loadPlugin, "Load a plugin")
     .def_static(
       "autoload_plugins", &f3d::engine::autoloadPlugins, "Automatically load internal plugins")

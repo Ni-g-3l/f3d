@@ -58,6 +58,11 @@ public class TestInteractor {
     interactor.jumpToKeyframeRelative(1);
     interactor.jumpToKeyframe(0);
 
+    interactor.setNotificationCallback((desc, value, bindStr, duration) -> {
+      System.out.println("Notification: " + desc + " " + value + " " + bindStr + " " + duration);
+      return true;
+    });
+
     interactor.triggerNotification("foo", "bar", 3.0);
 
     Interactor.AnimationDirection.FORWARD.getValue();

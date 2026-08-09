@@ -29,8 +29,11 @@ public class TestScene {
     String logo = testDataPath +  "data/f3d.glb";
     String sphere = testDataPath + "data/mb/recursive/mb_1_0.vtp";
 
-    Engine engine = Engine.createNone();
+    Engine engine = Engine.create(true);
     Scene scene = engine.getScene();
+    Interactor interactor = engine.getInteractor();
+
+    System.out.println(interactor);
 
     scene.supports("test.obj");
 
